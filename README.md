@@ -19,4 +19,16 @@ Prerequisites:
 
 * libz.h
   * Installed with `libz-dev` or `zlib1g-dev`
+* [sqlite3.c](https://www.sqlite.org/download.html)
+  * Or you can modify the compile instructions to use `libsqlite0-dev`
 * Any modern C++ compiler
+* [libycompsky](https://github.com/NotCompsky/libcompsky)
+
+# Usage
+
+    [/path/to/sqlite.db] [PORT] [MAX_CONTENT_SIZE_IN_MB] [MODE]
+
+MODE can be:
+
+* ro (read-only)
+* rw (read-write)
