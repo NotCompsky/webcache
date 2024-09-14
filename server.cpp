@@ -252,14 +252,9 @@ class HTTPResponseHandler {
 							}
 							
 							char* itr = content_length_int_str;
-							unsigned n_digits = 0;
-							do {
-								*(itr++) = '0' + (content_length_int % 10);
-								content_length_int /= 10;
-								++n_digits;
-							} while(content_length_int != 0);
+							compsky::asciify::asciify(itr, content_length_int);
 							
-							content_length = std::string_view(content_length_int_str, n_digits);
+							content_length = std::string_view(content_length_int_str, compsky::utils::ptrdiff(itr,content_length_int_str));
 						}
 						
 						compsky::asciify::asciify(server_itr,
