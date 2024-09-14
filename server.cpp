@@ -154,7 +154,7 @@ class HTTPResponseHandler {
 			[[likely]];
 			constexpr const char prefix1[8] = {'h','e','d','/','h','t','t','p'};
 			if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix1)){
-				char* domain = str + 16;
+				const char* domain = str + 16;
 				if ((domain[0] == ':') and (domain[1] == '/') and (domain[2] == '/')){
 					domain += 3;
 				} else if ((domain[0] == 's') and (domain[1] == ':') and (domain[2] == '/') and (domain[3] == '/')){
@@ -167,7 +167,7 @@ class HTTPResponseHandler {
 				
 				unsigned domain_length;
 				{
-					char* domain_end = domain;
+					const char* domain_end = domain;
 					while(*domain_end != 0){
 						if (*domain_end == '/'){
 							break;
@@ -182,10 +182,10 @@ class HTTPResponseHandler {
 					domain_length = compsky::utils::ptrdiff(domain_end,domain);
 				}
 				
-				char* const path = domain + domain_length;
+				const char* const path = domain + domain_length;
 				unsigned path_length;
 				{
-					char* path_end = path;
+					const char* path_end = path;
 					while(*path_end != 0){
 						if (*path_end == ' '){
 							break;
@@ -689,6 +689,7 @@ int main(const int argc,  const char* const* const argv){
 		}
 	}
 	if (sqlite3_prepare_v2(db, "SELECT content, headers FROM file WHERE domain=? AND path=? LIMIT 1", -1, &stmt, NULL) != SQLITE_OK){
+		[[unlikely]];
 		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		return 1;
