@@ -285,77 +285,7 @@ class HTTPResponseHandler {
 					HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
 					"Content-Length: 2332\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
 					"\r\n"
-					R"===(const actionbtn = document.getElementById("actionbtn");
-const input_bothparts = document.getElementById("input_bothparts");
-const input_domain = document.getElementById("input_domain");
-const input_urlpath = document.getElementById("input_urlpath");
-input_bothparts.addEventListener("change", ()=>{
-	const m = input_bothparts.value.match(/^https?:\/\/([^\/]+)(\/.*)$/);
-	if (m !== null){
-		input_domain.value = m[1];
-		input_urlpath.value = m[2];
-	}
-	input_bothparts.value = "";
-});
-actionbtn.addEventListener("pointerup", ()=>{
-	const domain = input_domain.value;
-	if (domain){
-		if (domain.match(/^[a-z0-9-]+([.][a-z0-9-]+)+$/) === null){
-			alert("Bad domain");
-			return;
-		}
-		const path = input_urlpath.value;
-		if (path){
-			if (!path.startsWith("/")){
-				alert("Path doesn't start with slash");
-				return;
-			}
-			
-			const do_from_clipboard = document.getElementById("addfromclipboard").checked;
-			const do_from_filepath  = document.getElementById("enable_filepath").checked;
-			const do_from_textarea  = document.getElementById("enable_textarea").checked;
-			
-			if (do_from_clipboard + do_from_filepath + do_from_textarea === 1){
-				let filepath = "";
-				let contents = "";
-				let promise = Promise.resolve();
-				
-				if (do_from_clipboard){
-					promise = navigator.clipboard.readText();
-				} else if (do_from_filepath){
-					filepath = document.getElementById("input_filepath").value;
-					if (filepath){
-						if (!filepath.startsWith("/")){
-							alert("Filepath doesn't start with slash");
-							return;
-						}
-					}
-				} else if (do_from_textarea){
-					contents = document.getElementById("textarea").value;
-				}
-				
-				actionbtn.disabled = true;
-				promise.then(_contents => {
-					if (_contents !== undefined)
-						contents = _contents;
-					fetch(document.location, {credentials:"include", method:"POST", body:domain+"\n"+path+"\n\n"+filepath+"\n"+contents}).then(r => {
-						actionbtn.disabled = false;
-						if(!r.ok){
-							const errstr = `Server returned ${r.status}: ${r.statusText}`;
-							alert(errstr);
-							throw Error(errstr);
-						}
-					});
-				});
-			} else {
-				alert("Please select exactly ONE method");
-			}
-		}
-	}
-});
-document.getElementById("enable_textarea").addEventListener("change", e=>{
-	document.getElementById("textarea").disabled = !e.currentTarget.checked;
-});)==="
+					#include "cacheinsert.js"
 				;
 			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix3)){
 				return
@@ -365,43 +295,7 @@ document.getElementById("enable_textarea").addEventListener("change", e=>{
 					SECURITY_HEADERS
 					"Content-Length: 1557\r\n"
 					"\r\n"
-					R"===(<!DOCTYPE html>
-<html>
-<head>
-	<title>WebCache Insert</title>
-	<link rel="stylesheet" href="/style.css" type="text/css"/>
-	<style>
-#addfromclipboard_contents {
-	max-height:50vh;
-	max-width:100vw;
-}
-input {
-	width:90vw;
-}
-	</style>
-</head>
-<body>
-	<ul>
-		<li>Content from<ul>
-			<li><label for="enable_filepath">From file</label><input id="enable_filepath" type="checkbox" autocomplete="off"></input><ul>
-				<li><input type="text" value="/path/to/file.html" placeholder="filepath" id="input_filepath"/></li>
-			</ul></li>
-			<li>or <label for="addfromclipboard">from clipboard</label><input id="addfromclipboard" type="checkbox" autocomplete="off"></input><ul>
-				<li>This is disabled in Firefox, but can be enabled in about:config by turning on <b>dom.events.testing.asyncClipboard</b> and <b>dom.events.asyncClipboard.readText</b></li>
-			</ul></li>
-			<li>or from this:<ul>
-				<li><textarea id="textarea" disabled="" contenteditable></textarea></li>
-				<li><label for="enable_textarea">Enable</label><input id="enable_textarea" type="checkbox" autocomplete="off"></input></li>
-			</ul></li>
-		</ul>
-		<li><input type="text" value="www.domain.com" placeholder="domain" id="input_domain"/></li>
-		<li><input type="text" placeholder="/url/path" id="input_urlpath"/></li>
-		<li><input type="text" placeholder="https://www.domain.com/url/path (for automated splitting)" id="input_bothparts" autocomplete="off"/></li>
-	</ul>
-	<li><button id="actionbtn">Insert</button></li>
-	<script src="/cacheins.js" type="application/javascript"></script>
-</body>
-</html>)==="
+					#include "cacheinsert.html"
 				;
 			} else {
 				[[unlikely]];
