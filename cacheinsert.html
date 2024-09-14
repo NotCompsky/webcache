@@ -16,15 +16,16 @@ input {
 <body>
 	<ul>
 		<li>Content from<ul>
-			<li><label for="enable_filepath">From file</label><input id="enable_filepath" type="checkbox" autocomplete="off"></input><ul>
+			<li><input id="enable_filepath" type="checkbox" autocomplete="off"></input><label for="enable_filepath">From file</label><ul>
 				<li><input type="text" value="/path/to/file.html" placeholder="filepath" id="input_filepath"/></li>
 			</ul></li>
-			<li>or <label for="addfromclipboard">from clipboard</label><input id="addfromclipboard" type="checkbox" autocomplete="off"></input><ul>
+			<li><input id="addfromclipboard" type="checkbox" autocomplete="off"></input>or <label for="addfromclipboard">from clipboard</label><ul>
 				<li>This is disabled in Firefox, but can be enabled in about:config by turning on <b>dom.events.testing.asyncClipboard</b> and <b>dom.events.asyncClipboard.readText</b></li>
+				<li><button id="guess_from_clipboard">Guess URL from content</button></li>
 			</ul></li>
-			<li>or from this:<ul>
+			<li><input id="enable_textarea" type="checkbox" autocomplete="off"></input>or <label for="enable_textarea">from this</label>:<ul>
 				<li><textarea id="textarea" disabled="" contenteditable></textarea></li>
-				<li><label for="enable_textarea">Enable</label><input id="enable_textarea" type="checkbox" autocomplete="off"></input></li>
+				<li><button id="guess_from_textarea">Guess URL from content</button></li>
 			</ul></li>
 		</ul>
 		<li><input type="text" value="www.domain.com" placeholder="domain" id="input_domain"/></li>
