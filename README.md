@@ -23,9 +23,15 @@ Prerequisites:
 
 # Usage
 
+## Server
+
     [/path/to/sqlite.db] [PORT] [MAX_CONTENT_SIZE_IN_MB] [MODE]
 
 MODE can be:
 
 * ro (read-only)
 * rw (read-write)
+
+## Browser
+
+If you have Greasemonkey or Tampermonkey installed on your browser, you can use the included `tampermonkey.js` script to add a 'Copy to clipboard' button to all web pages, which will make it easy to store those web pages in the database without downloading them first. But this method would not cache anything except the HTML.
