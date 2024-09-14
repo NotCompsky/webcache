@@ -147,6 +147,7 @@ class HTTPResponseHandler {
 	){
 		// NOTE: str guaranteed to be at least default_req_buffer_sz_minus1
 		constexpr const char prefix0[8] = {'G','E','T',' ','/','c','a','c'};
+		constexpr const char prefix5[8] = {'G','E','T',' ','/','s','t','y'};
 		constexpr const char prefix2[8] = {'P','O','S','T',' ','/','c','a'};
 		constexpr const char prefix3[8] = {'h','e','i','n','s','e','r','t'};
 		constexpr const char prefix4[8] = {'h','e','i','n','s','.','j','s'};
@@ -470,6 +471,16 @@ class HTTPResponseHandler {
 				}
 				sqlite3_reset(stmt2);
 			}
+		} else if (reinterpret_cast<uint64_t*>(str)[0] == uint64_value_of(prefix5)){
+			return
+				HEADER__RETURN_CODE__OK
+				HEADER__CONTENT_TYPE__CSS
+				HEADER__CONNECTION_KEEP_ALIVE
+				HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
+				"Content-Length: 71\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
+				"\r\n"
+				#include "style.css"
+			;
 		} else {
 			printf("Bad request, not GET /cached/: %.8s\n%lu vs %lu\n", str, reinterpret_cast<uint64_t*>(str)[0], uint64_value_of(prefix0));
 		}
