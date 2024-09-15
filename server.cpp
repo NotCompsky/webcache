@@ -572,7 +572,7 @@ int main(const int argc,  const char* const* const argv){
 			
 			fprintf(stderr, "Creating database at: %s\n", db_path);
 			sqlite3_stmt* creation_stmt;
-			if (sqlite3_prepare_v2(db, "CREATE TABLE file (domain STRING NOT NULL, path STRING NOT NULL, content BLOB NOT NULL, headers STRING NOT NULL)", -1, &creation_stmt, NULL) != SQLITE_OK){
+			if (sqlite3_prepare_v2(db, "CREATE TABLE file (domain STRING NOT NULL, path STRING NOT NULL, content BLOB NOT NULL, headers STRING NOT NULL, UNIQUE (domain,path))", -1, &creation_stmt, NULL) != SQLITE_OK){
 				[[unlikely]];
 				fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 				sqlite3_close(db);
