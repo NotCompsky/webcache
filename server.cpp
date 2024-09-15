@@ -26,6 +26,19 @@
 	"Content-Security-Policy: default-src 'none'; frame-src 'none'; connect-src 'self'; script-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'\r\n"
 
 
+void write_human_bytes(char*& itr,  int64_t n){
+	unsigned unit_indx = 0;
+	while (n > 4098){
+		++unit_indx;
+		n /= 1024;
+	}
+	compsky::asciify::asciify(itr, n);
+	if (unit_indx != 0){
+		compsky::asciify::asciify(itr, (unit_indx==1) ? 'K' : ((unit_indx==2) ? 'M' : ((unit_indx==3) ? 'G' : ((unit_indx==4) ? 'T' : ((unit_indx==5) ? 'P' : '?')))), 'i');
+	}
+	compsky::asciify::asciify(itr, 'B');
+}
+
 const char* find_substr(const char* container,  const int container_sz,  const char* const substr,  const unsigned substr_len){
 	const char* const container_end = container + container_sz;
 	const char* substr_stateful = substr;
@@ -114,6 +127,10 @@ char* second_buf;
 sqlite3* db;
 sqlite3_stmt* stmt;
 sqlite3_stmt* stmt2 = nullptr;
+#ifndef COMPSKY_NOSTATS
+sqlite3_stmt* stmt_stats_CountPerDomain;
+sqlite3_stmt* stmt_stats_LargestFiles;
+#endif
 
 constexpr
 uint32_t uint32_value_of(const char(&s)[4]){
@@ -148,6 +165,7 @@ class HTTPResponseHandler {
 		// NOTE: str guaranteed to be at least default_req_buffer_sz_minus1
 		constexpr const char prefix0[8] = {'G','E','T',' ','/','c','a','c'};
 		constexpr const char prefix5[8] = {'G','E','T',' ','/','s','t','y'};
+		constexpr const char prefix6[8] = {'G','E','T',' ','/','s','t','a'};
 		constexpr const char prefix2[8] = {'P','O','S','T',' ','/','c','a'};
 		constexpr const char prefix3[8] = {'h','e','i','n','s','e','r','t'};
 		constexpr const char prefix4[8] = {'h','e','i','n','s','.','j','s'};
@@ -481,6 +499,66 @@ class HTTPResponseHandler {
 				"\r\n"
 				#include "style.css"
 			;
+#ifndef COMPSKY_NOSTATS
+		} else if (reinterpret_cast<uint64_t*>(str)[0] == uint64_value_of(prefix6)){
+			char* itr = server_buf;
+			constexpr std::string_view known_headers(
+				HEADER__RETURN_CODE__OK
+				HEADER__CONTENT_TYPE__HTML
+				HEADER__CONNECTION_KEEP_ALIVE
+				SECURITY_HEADERS
+				"Content-Length: "
+			);
+			
+			itr += known_headers.size() + 19 + 4; // size of content-length value, and size of \r\n\r\n
+			char* const beginning_of_content = itr;
+			
+			compsky::asciify::asciify(itr, "<!DOCTYPE html><html><body><h2>All domains</h2><table><tr><th>Count</th><th>Domain</th></tr>");
+			while (sqlite3_step(stmt_stats_CountPerDomain) != SQLITE_DONE){
+				const int64_t count = sqlite3_column_int64(stmt_stats_CountPerDomain, 0);
+				
+				const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_CountPerDomain, 1));
+				const int domain_sz = sqlite3_column_bytes(stmt_stats_CountPerDomain, 1);
+				
+				compsky::asciify::asciify(itr, "<tr><td>", count, "</td><td>", std::string_view(domain,domain_sz), "</td></tr>");
+			}
+			compsky::asciify::asciify(itr, "</table>");
+			sqlite3_reset(stmt_stats_CountPerDomain);
+			
+			compsky::asciify::asciify(itr, "<h2>Largest files</h2><table><tr><th>Size</th><th>Domain</th></tr>");
+			while (sqlite3_step(stmt_stats_LargestFiles) != SQLITE_DONE){
+				const int64_t file_sz = sqlite3_column_int64(stmt_stats_LargestFiles, 0);
+				
+				const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 1));
+				const int domain_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 1);
+				
+				const char* const path = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 2));
+				const int path_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 2);
+				
+				compsky::asciify::asciify(itr, "<tr><td>");
+				write_human_bytes(itr, file_sz);
+				compsky::asciify::asciify(itr, "</td><td><a href=\"/cached/https://", std::string_view(domain,domain_sz), std::string_view(path,path_sz), "\">",std::string_view(domain,domain_sz),"</a></td></tr>");
+			}
+			compsky::asciify::asciify(itr, "</table></body></html>");
+			sqlite3_reset(stmt_stats_LargestFiles);
+			
+			const unsigned content_length = compsky::utils::ptrdiff(itr,beginning_of_content);
+			unsigned content_length_ndigits = 0;
+			{
+				unsigned n = content_length;
+				do {
+					++content_length_ndigits;
+					n /= 10;
+				} while(n != 0);
+			}
+			char* const beginning_of_response = server_buf + 19 - content_length_ndigits;
+			{
+				char* itr2 = beginning_of_response;
+				compsky::asciify::asciify(itr2, known_headers, content_length, "\r\n\r\n");
+			}
+			
+			return std::string_view(beginning_of_response, compsky::utils::ptrdiff(itr,beginning_of_response));
+#endif
 		} else {
 			printf("Bad request, not GET /cached/: %.8s\n%lu vs %lu\n", str, reinterpret_cast<uint64_t*>(str)[0], uint64_value_of(prefix0));
 		}
@@ -589,6 +667,18 @@ int main(const int argc,  const char* const* const argv){
 		}
 	}
 	if (sqlite3_prepare_v2(db, "SELECT content, headers FROM file WHERE domain=? AND path=? LIMIT 1", -1, &stmt, NULL) != SQLITE_OK){
+		[[unlikely]];
+		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return 1;
+	}
+	if (sqlite3_prepare_v2(db, "SELECT COUNT(*), domain FROM file GROUP BY domain", -1, &stmt_stats_CountPerDomain, NULL) != SQLITE_OK){
+		[[unlikely]];
+		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return 1;
+	}
+	if (sqlite3_prepare_v2(db, "SELECT octet_length(content) AS sz, domain, path FROM file ORDER BY sz DESC LIMIT 100", -1, &stmt_stats_LargestFiles, NULL) != SQLITE_OK){
 		[[unlikely]];
 		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
