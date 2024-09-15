@@ -716,7 +716,7 @@ int main(const int argc,  const char* const* const argv){
 		return 1;
 	}
 	if (sqlite_mode == SQLITE_OPEN_READWRITE){
-		if (sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO file (domain, path, content, headers) VALUES (?,?,?,?)", -1, &stmt2, NULL) != SQLITE_OK){
+		if (sqlite3_prepare_v2(db, "INSERT INTO file (domain, path, content, headers) VALUES (?,?,?,?) ON CONFLICT(domain,path) DO UPDATE SET content=excluded.content, headers=excluded.headers", -1, &stmt2, NULL) != SQLITE_OK){
 			[[unlikely]];
 			fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 			sqlite3_close(db);
