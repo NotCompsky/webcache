@@ -94,12 +94,12 @@ unsigned compress(char* const compressed_data_buf,  const void* const uncompress
 	return stream.total_out;
 }
 
-unsigned decompress(char* const decompressed_data_buf,  const void* const compressed_data,  const int compressed_size){
+unsigned decompress(char* const decompressed_data_buf,  const void* const compressed_data,  const int compressed_size,  const int _max_decompressed_size){
 	z_stream stream;
 	memset(&stream, 0, sizeof(stream));
 	stream.avail_in = compressed_size;
 	stream.next_in = reinterpret_cast<Bytef*>(const_cast<void*>(compressed_data));
-	stream.avail_out = max_decompressed_size;
+	stream.avail_out = _max_decompressed_size;
 	stream.next_out = reinterpret_cast<unsigned char*>(decompressed_data_buf);
 	
 	if (inflateInit2(&stream, 15 + 16) != Z_OK){
@@ -250,6 +250,20 @@ class HTTPResponseHandler {
 						
 						content_typ = std::string_view(header__content_typ, compsky::utils::ptrdiff(header__content_typ__end,header__content_typ));
 					}
+					if ((header__content_typ == nullptr) and (compressed_size >= compsky::mimetyp::n_bytes)){
+						compsky::mimetyp::MimeTyp mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
+						if (mimetype_id == compsky::mimetyp::GZIP){
+							[[likely]];
+							char buf[compsky::mimetyp::n_bytes];
+							decompress(buf, compressed_data, compressed_size, compsky::mimetyp::n_bytes);
+							mimetype_id = compsky::mimetyp::guess_mimetype(buf);
+						}
+						const char* const mimetype = compsky::mimetyp::mimetype2str(mimetype_id);
+						if (mimetype != nullptr){
+							[[likely]];
+							content_typ = std::string_view(mimetype,strlen(mimetype));
+						}
+					}
 					
 					const char* const header__content_length = find_substr(header_data, header_size, "\"content-length\": \"", 27);
 					std::string_view content_length(nullptr,0);
@@ -267,7 +281,7 @@ class HTTPResponseHandler {
 							
 							uint32_t content_length_int = compressed_size;
 							if (content_encoding.size() != 0){
-								uint32_t content_length_int = decompress(server_buf, compressed_data, compressed_size);
+								uint32_t content_length_int = decompress(server_buf, compressed_data, compressed_size, max_decompressed_size);
 							}
 							
 							char* itr = content_length_int_str;
