@@ -628,23 +628,23 @@ int main(const int argc,  const char* const* const argv){
 	int32_t sqlite_mode = SQLITE_OPEN_READWRITE;
 	const char* const db_path = argv[1];
 	const unsigned port_n = a2n<unsigned>(argv[2]);
-	server_buf_sz = 1024*1024 * a2n<unsigned>(argv[3]);
+	server_buf_sz = 1024*1024 * a2n<unsigned>(argv[4]);
 	max_decompressed_size = server_buf_sz;
 	
-	if (argc != 5){
+	if (argc != 6){
 		error_and_exit:
 		[[unlikely]]
-		write(2, "USAGE: [/path/to/sqlite.db] [PORT] [MAX_CONTENT_SIZE_IN_MB] ['ro' for READONLY_MODE, 'rw' for default READ+WRITE]\n", 114);
+		write(2, "USAGE: [/path/to/sqlite.db] [PORT] [MAX_REQUEST_SIZE_IN_KB] [MAX_CONTENT_SIZE_IN_MB] ['ro' for READONLY_MODE, 'rw' for default READ+WRITE]\n", 135);
 		return 1;
 	}
 	
-	if (argv[4][0] != 'r'){
+	if (argv[5][0] != 'r'){
 		[[unlikely]]
 		goto error_and_exit;
 	}
-	if (argv[4][1] == 'o'){
+	if (argv[5][1] == 'o'){
 		sqlite_mode = SQLITE_OPEN_READONLY;
-	} else if (argv[4][1] == 'w'){
+	} else if (argv[5][1] == 'w'){
 	} else {
 		[[unlikely]]
 		goto error_and_exit;
@@ -726,7 +726,7 @@ int main(const int argc,  const char* const* const argv){
 	
 	
 	signal(SIGPIPE, SIG_IGN); // see https://stackoverflow.com/questions/5730975/difference-in-handling-of-signals-in-unix for why use this vs sigprocmask - seems like sigprocmask just causes a queue of signals to build up  (but send could have MSG_NOSIGNAL flag)
-	Server::max_req_buffer_sz_minus_1 = 500*1024; // NOTE: Size is arbitrary
+	Server::max_req_buffer_sz_minus_1 = a2n<unsigned>(argv[3]) * 1024; // NOTE: Size is arbitrary
 	Server::run(port_n, INADDR_LOOPBACK, server_buf, all_client_contexts, EWOULDBLOCK_queue);
 	
 	sqlite3_finalize(stmt);
