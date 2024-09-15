@@ -26,7 +26,7 @@ if [[ $# -eq 1 ]]; then
 $path
 $OUTFILE_PATH
 
-	"
+"
 		echo ""
 		printf "%s" "http://localhost:8080/cached/$url" | xclip -i -selection clipboard
 		# NOTE: By default, primary (XA_PRIMARY) is pasted with middle-button, NOT left-button

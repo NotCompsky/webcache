@@ -504,6 +504,16 @@ class HTTPResponseHandler {
 					return not_found;
 				}
 				sqlite3_reset(stmt2);
+				
+				return
+					HEADER__RETURN_CODE__OK
+					HEADER__CONTENT_TYPE__TEXT
+					HEADER__CONNECTION_KEEP_ALIVE
+					HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
+					"Content-Length: 2\r\n"
+					"\r\n"
+					"OK"
+				;
 			}
 		} else if (reinterpret_cast<uint64_t*>(str)[0] == uint64_value_of(prefix5)){
 			return
