@@ -18,6 +18,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <chrono>
 #include "sqlite-amalgamation-3450100/sqlite3.h"
 #include "typedefs.hpp"
 
@@ -494,6 +495,7 @@ class HTTPResponseHandler {
 				sqlite3_bind_text(stmt2, 2, path,     compsky::utils::ptrdiff(path_end,path),         SQLITE_STATIC);
 				sqlite3_bind_text(stmt2, 3, contents, content_length,                                 SQLITE_STATIC);
 				sqlite3_bind_text(stmt2, 4, headers,  headers_len,                                    SQLITE_STATIC);
+				sqlite3_bind_int64(stmt2, 5, std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 				
 				if (sqlite3_step(stmt2) != SQLITE_DONE){
 					[[unlikely]];
@@ -681,7 +683,7 @@ int main(const int argc,  const char* const* const argv){
 			
 			fprintf(stderr, "Creating database at: %s\n", db_path);
 			sqlite3_stmt* creation_stmt;
-			if (sqlite3_prepare_v2(db, "CREATE TABLE file (domain STRING NOT NULL, path STRING NOT NULL, content BLOB NOT NULL, headers STRING NOT NULL, UNIQUE (domain,path))", -1, &creation_stmt, NULL) != SQLITE_OK){
+			if (sqlite3_prepare_v2(db, "CREATE TABLE file (domain STRING NOT NULL, path STRING NOT NULL, content BLOB NOT NULL, headers STRING NOT NULL, t_added INTEGER UNSIGNED NOT NULL DEFAULT 0, hits INTEGER UNSIGNED NOT NULL DEFAULT 0, UNIQUE (domain,path))", -1, &creation_stmt, NULL) != SQLITE_OK){
 				[[unlikely]];
 				fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 				sqlite3_close(db);
@@ -716,7 +718,7 @@ int main(const int argc,  const char* const* const argv){
 		return 1;
 	}
 	if (sqlite_mode == SQLITE_OPEN_READWRITE){
-		if (sqlite3_prepare_v2(db, "INSERT INTO file (domain, path, content, headers) VALUES (?,?,?,?) ON CONFLICT(domain,path) DO UPDATE SET content=excluded.content, headers=excluded.headers", -1, &stmt2, NULL) != SQLITE_OK){
+		if (sqlite3_prepare_v2(db, "INSERT INTO file (domain, path, content, headers, t_added, hits) VALUES (?,?,?,?,?,0) ON CONFLICT(domain,path) DO UPDATE SET content=excluded.content, headers=excluded.headers", -1, &stmt2, NULL) != SQLITE_OK){
 			[[unlikely]];
 			fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 			sqlite3_close(db);
