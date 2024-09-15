@@ -527,34 +527,51 @@ class HTTPResponseHandler {
 			itr += known_headers.size() + 19 + 4; // size of content-length value, and size of \r\n\r\n
 			char* const beginning_of_content = itr;
 			
-			compsky::asciify::asciify(itr, "<!DOCTYPE html><html><body><h2>All domains</h2><table><tr><th>Count</th><th>Domain</th></tr>");
-			while (sqlite3_step(stmt_stats_CountPerDomain) != SQLITE_DONE){
-				const int64_t count = sqlite3_column_int64(stmt_stats_CountPerDomain, 0);
-				
-				const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_CountPerDomain, 1));
-				const int domain_sz = sqlite3_column_bytes(stmt_stats_CountPerDomain, 1);
-				
-				compsky::asciify::asciify(itr, "<tr><td>", count, "</td><td>", std::string_view(domain,domain_sz), "</td></tr>");
-			}
-			compsky::asciify::asciify(itr, "</table>");
-			sqlite3_reset(stmt_stats_CountPerDomain);
+			compsky::asciify::asciify(itr, "<!DOCTYPE html><html><body>");
 			
-			compsky::asciify::asciify(itr, "<h2>Largest files</h2><table><tr><th>Size</th><th>Domain</th></tr>");
-			while (sqlite3_step(stmt_stats_LargestFiles) != SQLITE_DONE){
-				const int64_t file_sz = sqlite3_column_int64(stmt_stats_LargestFiles, 0);
-				
-				const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 1));
-				const int domain_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 1);
-				
-				const char* const path = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 2));
-				const int path_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 2);
-				
-				compsky::asciify::asciify(itr, "<tr><td>");
-				write_human_bytes(itr, file_sz);
-				compsky::asciify::asciify(itr, "</td><td><a href=\"/cached/https://", std::string_view(domain,domain_sz), std::string_view(path,path_sz), "\">",std::string_view(domain,domain_sz),"</a></td></tr>");
+			constexpr const char prefix7[8] = {'t','s','/','s','i','t','e','s'};
+			constexpr const char prefix8[8] = {'t','s','/','b','i','g','f','i'};
+			if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix7)){
+				compsky::asciify::asciify(itr, "<h2>All domains</h2><table><tr><th>Count</th><th>Total size</th><th>Domain</th></tr>");
+				while (sqlite3_step(stmt_stats_CountPerDomain) != SQLITE_DONE){
+					const int64_t count = sqlite3_column_int64(stmt_stats_CountPerDomain, 0);
+					
+					const int64_t total_sz = sqlite3_column_int64(stmt_stats_CountPerDomain, 1);
+					
+					const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_CountPerDomain, 2));
+					const int domain_sz = sqlite3_column_bytes(stmt_stats_CountPerDomain, 2);
+					
+					compsky::asciify::asciify(itr, "<tr><td>", count, "</td><td>");
+					write_human_bytes(itr, total_sz);
+					compsky::asciify::asciify(itr, "</td><td>", std::string_view(domain,domain_sz), "</td></tr>");
+				}
+				compsky::asciify::asciify(itr, "</table>");
+				sqlite3_reset(stmt_stats_CountPerDomain);
+			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix8)){
+				compsky::asciify::asciify(itr, "<h2>Largest files</h2><table><tr><th>Size</th><th>Domain</th></tr>");
+				while (sqlite3_step(stmt_stats_LargestFiles) != SQLITE_DONE){
+					const int64_t file_sz = sqlite3_column_int64(stmt_stats_LargestFiles, 0);
+					
+					const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 1));
+					const int domain_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 1);
+					
+					const char* const path = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_LargestFiles, 2));
+					const int path_sz = sqlite3_column_bytes(stmt_stats_LargestFiles, 2);
+					
+					compsky::asciify::asciify(itr, "<tr><td>");
+					write_human_bytes(itr, file_sz);
+					compsky::asciify::asciify(itr, "</td><td><a href=\"/cached/https://", std::string_view(domain,domain_sz), std::string_view(path,path_sz), "\">",std::string_view(domain,domain_sz),"</a></td></tr>");
+				}
+				compsky::asciify::asciify(itr, "</table>");
+				sqlite3_reset(stmt_stats_LargestFiles);
+			} else {
+				compsky::asciify::asciify(itr,
+					"<h2>Stats</h2>"
+					"<a href=\"/stats/bigfiles\">Biggest files</a><br>"
+					"<a href=\"/stats/sites\">All cached sites</a>"
+				);
 			}
-			compsky::asciify::asciify(itr, "</table></body></html>");
-			sqlite3_reset(stmt_stats_LargestFiles);
+			compsky::asciify::asciify(itr, "</body></html>");
 			
 			const unsigned content_length = compsky::utils::ptrdiff(itr,beginning_of_content);
 			unsigned content_length_ndigits = 0;
@@ -686,7 +703,7 @@ int main(const int argc,  const char* const* const argv){
 		sqlite3_close(db);
 		return 1;
 	}
-	if (sqlite3_prepare_v2(db, "SELECT COUNT(*), domain FROM file GROUP BY domain", -1, &stmt_stats_CountPerDomain, NULL) != SQLITE_OK){
+	if (sqlite3_prepare_v2(db, "SELECT COUNT(*), SUM(octet_length(content)) AS sz, domain FROM file GROUP BY domain ORDER BY sz DESC", -1, &stmt_stats_CountPerDomain, NULL) != SQLITE_OK){
 		[[unlikely]];
 		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
