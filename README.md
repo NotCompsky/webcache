@@ -10,6 +10,11 @@ Features:
 * ability to write to the database with a `POST` request
   * You are able to use a script to, for any web page you visit, cache the page by clicking a button
 
+Bugs:
+
+* large files (above around 500KB) should be saved as files and inserted via specifying the filepath, they should not be uploaded
+  * This is because the server cannot handle large incoming requests - there is some as-yet-unidentified bug
+
 # Compiling
 
 Prerequisites:
