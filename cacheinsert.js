@@ -2,6 +2,7 @@ R"===(const actionbtn = document.getElementById("actionbtn");
 const input_bothparts = document.getElementById("input_bothparts");
 const input_domain = document.getElementById("input_domain");
 const input_urlpath = document.getElementById("input_urlpath");
+const link_to_cached_page = document.getElementById("link_to_cached_page");
 function set_both_parts_of_url(url){
 	const m = url.match(/^https?:\/\/([^\/]+)(\/.*)$/);
 	if (m !== null){
@@ -73,6 +74,7 @@ actionbtn.addEventListener("pointerup", ()=>{
 				}
 				
 				actionbtn.disabled = true;
+				link_to_cached_page.classList.add("display_none");
 				promise.then(_contents => {
 					if (_contents !== undefined)
 						contents = _contents;
@@ -83,6 +85,8 @@ actionbtn.addEventListener("pointerup", ()=>{
 							alert(errstr);
 							throw Error(errstr);
 						} else {
+							link_to_cached_page.href = "/cached/https://"+domain+path;
+							link_to_cached_page.classList.remove("display_none");
 							fetch("/cached/https://"+domain+path, {credentials:"include", method:"GET"}).then(rrr => {
 								if (rrr.ok){
 									rrr.blob().then(blobby => {

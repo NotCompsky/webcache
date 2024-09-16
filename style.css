@@ -1,4 +1,7 @@
 R"===(body, input, button, textinput {
 		background: black;
 		color: white;
+}
+.display_none {
+	display: none;
 })==="
