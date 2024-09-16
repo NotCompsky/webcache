@@ -82,6 +82,30 @@ actionbtn.addEventListener("pointerup", ()=>{
 							const errstr = `Server returned ${r.status}: ${r.statusText}`;
 							alert(errstr);
 							throw Error(errstr);
+						} else {
+							fetch("/cached/https://"+domain+path, {credentials:"include", method:"GET"}).then(rrr => {
+								if (rrr.ok){
+									rrr.blob().then(blobby => {
+										blobby.bytes().then(uint8arr => {
+											const expected_values = new TextEncoder().encode(contents);
+											let matched = (expected_values.length === uint8arr.length);
+											if (matched){
+												for (let i = 0;  i < expected_values.length;  ++i){
+													if (expected_values[i] !== uint8arr[i]){
+														matched = false;
+														break;
+													}
+												}
+											}
+											if (!matched){
+												alert("Server's cached version differs from what was requested to be cached. You should try again, using a file path instead of sending the file contents directly.");
+											}
+										});
+									});
+								} else {
+									alert(`Couldn't verify server's cached version is uncorrupted - server returned ${r.status}: ${r.statusText}`);
+								}
+							});
 						}
 					});
 				});
