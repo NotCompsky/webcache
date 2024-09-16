@@ -267,47 +267,15 @@ class HTTPResponseHandler {
 						}
 					}
 					
-					const char* const header__content_length = find_substr(header_data, header_size, "\"content-length\": \"", 27);
-					std::string_view content_length(nullptr,0);
 					char* server_itr = server_buf;
 					{
-						char content_length_int_str[10+1];
-						if (header__content_length != nullptr){
-							[[likely]];
-							
-							const char* const header__content_length__end = ffd894237sfdfsd(header__content_length);
-							
-							content_length = std::string_view(header__content_length, compsky::utils::ptrdiff(header__content_length__end,header__content_length));
-						} else {
-							printf("WARNING: content-length header not present for %.*s %.*s\n", (int)domain_length, domain, (int)path_length, path);
-							
-							uint32_t content_length_int = compressed_size;
-							if (content_encoding.size() != 0){
-								mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
-								if (mimetype_id == compsky::mimetyp::GZIP){
-									const uint32_t _content_length_int = decompress(server_buf, compressed_data, compressed_size, max_decompressed_size);
-									if (_content_length_int != 0){
-										[[likely]];
-										content_length_int = _content_length_int;
-									} else {
-										printf("ERROR: Couldn't decompress\n");
-									}
-								}
-							}
-							
-							char* itr = content_length_int_str;
-							compsky::asciify::asciify(itr, content_length_int);
-							
-							content_length = std::string_view(content_length_int_str, compsky::utils::ptrdiff(itr,content_length_int_str));
-						}
-						
 						compsky::asciify::asciify(server_itr,
 							"HTTP/1.1 200 OK",
 							content_encoding_prefix, content_encoding, "\r\n"
 							"Content-Type: ", content_typ, "\r\n"
 							"Cache-Control: max-age=64800\r\n"
 							"Connection: keep-alive\r\n"
-							"Content-Length: ", content_length, "\r\n"
+							"Content-Length: ", compressed_size, "\r\n"
 							"\r\n",
 							
 							std::string_view(reinterpret_cast<const char*>(compressed_data), compressed_size)
