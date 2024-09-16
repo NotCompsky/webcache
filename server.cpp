@@ -251,8 +251,9 @@ class HTTPResponseHandler {
 						
 						content_typ = std::string_view(header__content_typ, compsky::utils::ptrdiff(header__content_typ__end,header__content_typ));
 					}
+					compsky::mimetyp::MimeTyp mimetype_id = compsky::mimetyp::Unknown;
 					if ((header__content_typ == nullptr) and (compressed_size >= compsky::mimetyp::n_bytes)){
-						compsky::mimetyp::MimeTyp mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
+						mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
 						if (mimetype_id == compsky::mimetyp::GZIP){
 							[[likely]];
 							char buf[compsky::mimetyp::n_bytes];
@@ -282,7 +283,16 @@ class HTTPResponseHandler {
 							
 							uint32_t content_length_int = compressed_size;
 							if (content_encoding.size() != 0){
-								uint32_t content_length_int = decompress(server_buf, compressed_data, compressed_size, max_decompressed_size);
+								mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
+								if (mimetype_id == compsky::mimetyp::GZIP){
+									const uint32_t _content_length_int = decompress(server_buf, compressed_data, compressed_size, max_decompressed_size);
+									if (_content_length_int != 0){
+										[[likely]];
+										content_length_int = _content_length_int;
+									} else {
+										printf("ERROR: Couldn't decompress\n");
+									}
+								}
 							}
 							
 							char* itr = content_length_int_str;
