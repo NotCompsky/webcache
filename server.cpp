@@ -458,8 +458,6 @@ class HTTPResponseHandler {
 						printf("Bad POST request: Mimetype not provided, and contents too small to guess it.\n");
 						return not_found;
 					}
-					printf("Guessing mimetype...\n");
-					fflush(stdout);
 					mimetype = compsky::mimetyp::mimetype2str(compsky::mimetyp::guess_mimetype(contents));
 					if (mimetype == nullptr){
 						[[unlikely]];
@@ -531,7 +529,7 @@ class HTTPResponseHandler {
 				HEADER__CONTENT_TYPE__CSS
 				HEADER__CONNECTION_KEEP_ALIVE
 				HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
-				"Content-Length: 71\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
+				"Content-Length: 71\r\n"
 				"\r\n"
 				#include "style.css"
 			;
