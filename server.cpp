@@ -27,6 +27,55 @@
 	"Content-Security-Policy: default-src 'none'; frame-src 'none'; connect-src 'self'; script-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'\r\n"
 
 
+constexpr std::string_view known_headers(
+	HEADER__RETURN_CODE__OK
+	HEADER__CONTENT_TYPE__HTML
+	HEADER__CONNECTION_KEEP_ALIVE
+	SECURITY_HEADERS
+	"Content-Length: "
+);
+char* init_knownheader_response(char* const buf){
+	return buf + known_headers.size() + 19 + 4; // size of content-length value, and size of \r\n\r\n
+}
+std::string_view stringview_from_knownheader_response(char* const buf,  char* const end_of_content,  char* const beginning_of_content){
+	const unsigned content_length = compsky::utils::ptrdiff(end_of_content,beginning_of_content);
+	unsigned content_length_ndigits = 0;
+	{
+		unsigned n = content_length;
+		do {
+			++content_length_ndigits;
+			n /= 10;
+		} while(n != 0);
+	}
+	char* const beginning_of_response = buf + 19 - content_length_ndigits;
+	{
+		char* itr2 = beginning_of_response;
+		compsky::asciify::asciify(itr2, known_headers, content_length, "\r\n\r\n");
+	}
+	
+	return std::string_view(beginning_of_response, compsky::utils::ptrdiff(end_of_content,beginning_of_response));
+}
+
+unsigned index_of_char(const char c,  const char* const str,  const unsigned N){
+	unsigned i = 0;
+	for (;  i < N;  ++i){
+		if (str[i] == c){
+			break;
+		}
+	}
+	return i;
+}
+unsigned last_index_of_char__excluding_first(const char c,  const char* const str,  const unsigned N){
+	unsigned i = N;
+	while (i != 0){
+		--i;
+		if (str[i] == c){
+			break;
+		}
+	}
+	return i;
+}
+
 void write_human_bytes(char*& itr,  int64_t n){
 	unsigned unit_indx = 0;
 	while (n > 4098){
@@ -289,6 +338,69 @@ class HTTPResponseHandler {
 				} else {
 					sqlite3_reset(stmt);
 					printf("No results for %.*s %.*s\n", (int)domain_length, domain, (int)path_length, path);
+					
+					char* const beginning_of_content = init_knownheader_response(server_buf);
+					char* itr = beginning_of_content;
+					
+					constexpr std::string_view htmlbegin("<!DOCTYPE html><html><body><h1>Not Found</h1><h2>Possible alternatives</h2><b>These may or may not be cached</b><ul>");
+					compsky::asciify::asciify(itr, htmlbegin);
+					
+					{
+						const unsigned paramindx = index_of_char('?', path, path_length);
+						if (paramindx != path_length){
+							compsky::asciify::asciify(itr, "<li><a href=\"/cached/",std::string_view(domain,domain_length),std::string_view(path,paramindx),"\">Without URL parameterse</a></li>");
+						}
+					}
+					
+					if (domain_length == 14){
+						if (
+							(domain[3] == '.') and
+							(domain[4] == 'r') and
+							(domain[5] == 'e') and
+							(domain[6] == 'd') and
+							(domain[7] == 'd') and
+							(domain[8] == 'i') and
+							(domain[9] == 't') and
+							(domain[10]== '.') and
+							(domain[11]== 'c') and
+							(domain[12]== 'o') and
+							(domain[13]== 'm')
+						){
+							// *.reddit.com
+							
+							if (!(
+								(domain[0] == 'w') and
+								(domain[1] == 'w') and
+								(domain[2] == 'w')
+							)){
+								compsky::asciify::asciify(itr, "<li><a href=\"/cached/https://www.reddit.com",std::string_view(path,path_length),"\">On www.reddit.com</a></li>");
+							} else if (!(
+								(domain[0] == 'o') and
+								(domain[1] == 'l') and
+								(domain[2] == 'd')
+							)){
+								compsky::asciify::asciify(itr, "<li><a href=\"/cached/https://old.reddit.com",std::string_view(path,path_length),"\">On old.reddit.com</a></li>");
+							} else if (!(
+								(domain[0] == 'n') and
+								(domain[1] == 'e') and
+								(domain[2] == 'w')
+							)){
+								compsky::asciify::asciify(itr, "<li><a href=\"/cached/https://new.reddit.com",std::string_view(path,path_length),"\">On new.reddit.com</a></li>");
+							}
+							
+							{
+								const unsigned second_last_slash = last_index_of_char__excluding_first('/',path,path_length-1);
+								if (second_last_slash != 0){
+									compsky::asciify::asciify(itr, "<li><a href=\"/cached/",std::string_view(domain,domain_length),std::string_view(path,second_last_slash+1),"\">Without last subpath</a></li>");
+								}
+							}
+						}
+					}
+					if (itr != beginning_of_content + htmlbegin.size()){
+						compsky::asciify::asciify(itr, "</ul></body></html>");
+						return stringview_from_knownheader_response(server_buf, itr, beginning_of_content);
+					}
+					
 				}
 			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix4)){
 				return
@@ -504,17 +616,8 @@ class HTTPResponseHandler {
 			;
 #ifndef COMPSKY_NOSTATS
 		} else if (reinterpret_cast<uint64_t*>(str)[0] == uint64_value_of(prefix6)){
-			char* itr = server_buf;
-			constexpr std::string_view known_headers(
-				HEADER__RETURN_CODE__OK
-				HEADER__CONTENT_TYPE__HTML
-				HEADER__CONNECTION_KEEP_ALIVE
-				SECURITY_HEADERS
-				"Content-Length: "
-			);
-			
-			itr += known_headers.size() + 19 + 4; // size of content-length value, and size of \r\n\r\n
-			char* const beginning_of_content = itr;
+			char* const beginning_of_content = init_knownheader_response(server_buf);
+			char* itr = beginning_of_content;
 			
 			compsky::asciify::asciify(itr, "<!DOCTYPE html><html><body>");
 			
@@ -562,22 +665,7 @@ class HTTPResponseHandler {
 			}
 			compsky::asciify::asciify(itr, "</body></html>");
 			
-			const unsigned content_length = compsky::utils::ptrdiff(itr,beginning_of_content);
-			unsigned content_length_ndigits = 0;
-			{
-				unsigned n = content_length;
-				do {
-					++content_length_ndigits;
-					n /= 10;
-				} while(n != 0);
-			}
-			char* const beginning_of_response = server_buf + 19 - content_length_ndigits;
-			{
-				char* itr2 = beginning_of_response;
-				compsky::asciify::asciify(itr2, known_headers, content_length, "\r\n\r\n");
-			}
-			
-			return std::string_view(beginning_of_response, compsky::utils::ptrdiff(itr,beginning_of_response));
+			return stringview_from_knownheader_response(server_buf, itr, beginning_of_content);
 #endif
 		} else {
 			printf("Bad request, not GET /cached/: %.8s\n%lu vs %lu\n", str, reinterpret_cast<uint64_t*>(str)[0], uint64_value_of(prefix0));
