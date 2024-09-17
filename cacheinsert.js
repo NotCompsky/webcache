@@ -78,7 +78,7 @@ actionbtn.addEventListener("pointerup", ()=>{
 				promise.then(_contents => {
 					if (_contents !== undefined)
 						contents = _contents;
-					fetch(document.location, {credentials:"include", method:"POST", body:domain+"\n"+path+"\n\n"+filepath+"\n"+contents}).then(r => {
+					fetch(document.location, {credentials:"include", method:"POST", body:domain+"\n"+path+"\n"+filepath+"\n\n"+contents}).then(r => {
 						actionbtn.disabled = false;
 						if(!r.ok){
 							const errstr = `Server returned ${r.status}: ${r.statusText}`;
