@@ -275,6 +275,7 @@ class HTTPResponseHandler {
 							"Content-Type: ", content_typ, "\r\n"
 							"Cache-Control: max-age=64800\r\n"
 							"Connection: keep-alive\r\n"
+							SECURITY_HEADERS
 							"Content-Length: ", compressed_size, "\r\n"
 							"\r\n",
 							
