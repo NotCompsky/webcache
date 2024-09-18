@@ -8,17 +8,6 @@
 // @grant        none
 // ==/UserScript==
 
-function standardise_url(url){
-    return document.location.protocol + document.location.host + "/cached/" + url;
-}
-
-for (let node of document.getElementsByTagName("a")){
-    node.href = standardise_url(node.href);
-}
-for (let node of document.getElementsByTagName("img")){
-    node.src = standardise_url(node.src);
-}
-
 const btn = document.createElement("button");
 btn.innerText = "Overwrite WebCache with this edited HTML";
 btn.style.position = "fixed";

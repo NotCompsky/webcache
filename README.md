@@ -4,6 +4,7 @@ Web server that serves files from a SQLite database.
 
 Features:
 
+* fast (very low latency)
 * supports gzip compression
 * supports up to 3000 requests per second
   * Although SQLite lookup speeds probably dramatically limit this in realistic scenarios
@@ -15,6 +16,13 @@ Bugs:
 * large files (above around 500KB) should be saved as files and inserted via specifying the filepath, they should not be uploaded
   * This is because the server cannot handle large incoming requests - there is some as-yet-unidentified bug
 
+Missing features:
+
+* No HTTPS
+  * If you require this, run it behind a reverse proxy like nginx
+* Does not respect CORS headers
+  * Currently, CORS headers are written for maximum security - thus many assets do not load except in `local-only mode`
+
 # Compiling
 
 Prerequisites:
@@ -23,8 +31,8 @@ Prerequisites:
   * Installed with `libz-dev` or `zlib1g-dev`
 * [sqlite3.c](https://www.sqlite.org/download.html)
   * Or you can modify the compile instructions to use `libsqlite0-dev`
-* Any modern C++ compiler
 * [libycompsky](https://github.com/NotCompsky/libcompsky)
+* Any modern C++ compiler
 
 # Usage
 
@@ -45,7 +53,14 @@ Example:
 
 ## Browser
 
-If you have Greasemonkey or Tampermonkey installed on your browser, you can use the included `tampermonkey.js` script to add a 'Copy to clipboard' button to all web pages, which will make it easy to store those web pages in the database without downloading them first. But this method would not cache anything except the HTML.
+Greasemonkey/Tampermonkey scripts:
+
+* `baseline`
+  * Adds a 'copy to clipboard' button to all websites, so you can cache the HTML contents (only HTML) with just a couple of clicks
+  * The web pages would look exactly like their normal versions if CORS headers were respected; currently however this is not the case<!-- TODO -->
+* `local-only mode`
+  * Rewrites cached pages (via client-side JS) to only load assets from the WebCache server
+  * To make a website look like its original, you must usually cache all of its assets too (CSS, JavaScript, images, JSON...)
 
 Example:
 
