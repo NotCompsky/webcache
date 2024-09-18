@@ -16,21 +16,20 @@ input {
 <body>
 	<ul>
 		<li>Content from<ul>
-			<li><input id="enable_filepath" type="checkbox" autocomplete="off"></input><label for="enable_filepath">From file</label><ul>
+			<li><input id="enable_filepath" type="checkbox" autocomplete="off"></input><label for="enable_filepath"><b>From file</b></label><ul>
 				<li><input type="text" value="/path/to/file.html" placeholder="filepath" id="input_filepath"/></li>
 			</ul></li>
-			<li><input id="addfromclipboard" type="checkbox" autocomplete="off"></input>or <label for="addfromclipboard">from clipboard</label><ul>
+			<li><input id="addfromclipboard" type="checkbox" autocomplete="off"></input><label for="addfromclipboard">or <b>from clipboard</b></label><ul>
 				<li>This is disabled in Firefox, but can be enabled in about:config by turning on <b>dom.events.testing.asyncClipboard</b> and <b>dom.events.asyncClipboard.readText</b></li>
-				<li><button id="guess_from_clipboard">Guess URL from content</button></li>
 			</ul></li>
-			<li><input id="enable_textarea" type="checkbox" autocomplete="off"></input>or <label for="enable_textarea">from this</label>:<ul>
+			<li><input id="enable_textarea" type="checkbox" autocomplete="off"></input><label for="enable_textarea">or <b>from this</b></label>:<ul>
 				<li><textarea id="textarea" disabled="" contenteditable></textarea></li>
-				<li><button id="guess_from_textarea">Guess URL from content</button></li>
 			</ul></li>
 		</ul>
 		<li><input type="text" value="www.domain.com" placeholder="domain" id="input_domain"/></li>
 		<li><input type="text" placeholder="/url/path" id="input_urlpath"/></li>
 		<li><input type="text" placeholder="https://www.domain.com/url/path (for automated splitting)" id="input_bothparts" autocomplete="off"/></li>
+		<li><input id="guess_url_from_content" type="checkbox" autocomplete="off" checked="">or, guess URL from content</button></li>
 	</ul>
 	<li><button id="actionbtn">Insert</button></li>
 	<a id="link_to_cached_page" class="display_none">Link to cached page</a>
