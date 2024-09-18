@@ -17,23 +17,30 @@ function set_both_parts_of_url(url){
 function guess_url_from_content(value){
 	const searchforstr = '<a href="https://yandexwebcache.net/yandbtm?';
 	const yandex_cache_url_begin_index = value.indexOf(searchforstr);
-	const end_of_link = value.indexOf('"', yandex_cache_url_begin_index+searchforstr.length);
-	const url_within_this = value.substr(yandex_cache_url_begin_index, end_of_link-yandex_cache_url_begin_index);
 	
-	let url_start = url_within_this.indexOf("&amp;url=");
-	if (url_start !== -1){
-		url_start += 9;
-		let url_enddd = url_within_this.indexOf("&amp;",url_start);
-		if (url_enddd === -1)
-			url_enddd = url_within_this.length;
-		return decodeURIComponent(url_within_this.substr(url_start, url_enddd-url_start));
+	if (yandex_cache_url_begin_index !== -1){
+		const end_of_link = value.indexOf('"', yandex_cache_url_begin_index+searchforstr.length);
+		const url_within_this = value.substr(yandex_cache_url_begin_index, end_of_link-yandex_cache_url_begin_index);
+		
+		let url_start = url_within_this.indexOf("&amp;url=");
+		if (url_start !== -1){
+			url_start += 9;
+			let url_enddd = url_within_this.indexOf("&amp;",url_start);
+			if (url_enddd === -1)
+				url_enddd = url_within_this.length;
+			return decodeURIComponent(url_within_this.substr(url_start, url_enddd-url_start));
+		}
+	} else {
+		return Array.from(document.getElementsByTagName("link")).filter(x => x.rel==="canonical")[0].href;
 	}
 	return null;
 }
 function guess_bothparts_from_content(value){
 	const url = guess_url_from_content(value);
 	if (url)
-		set_both_parts_of_url(url);
+		return both_parts_of_url(url);
+	else
+		return null;
 }
 input_bothparts.addEventListener("change", ()=>{
 	if (set_both_parts_of_url(input_bothparts.value))
@@ -78,14 +85,13 @@ actionbtn.addEventListener("pointerup", ()=>{
 					if (_contents !== undefined)
 						contents = _contents;
 					if (should_guess_url_from_content){
-						input_domain.value = "";
-						input_urlpath.value = "";
-						guess_bothparts_from_content(contents);
-						domain = input_domain.value;
-						path = input_urlpath.value;
-						if ((!domain) || (!path)){
+						const m = guess_bothparts_from_content(contents);
+						if (m === null){
 							alert("Couldn't guess domain or path");
 							return;
+						} else {
+							domain = m[1];
+							path = m[2];
 						}
 					}
 					if (!path.startsWith("/")){

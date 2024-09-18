@@ -408,7 +408,7 @@ class HTTPResponseHandler {
 					HEADER__CONTENT_TYPE__JS
 					HEADER__CONNECTION_KEEP_ALIVE
 					HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
-					"Content-Length: 5107\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
+					"Content-Length: 5226\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
 					"\r\n"
 					#include "cacheinsert.js"
 				;
