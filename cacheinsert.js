@@ -31,7 +31,9 @@ function guess_url_from_content(value){
 			return decodeURIComponent(url_within_this.substr(url_start, url_enddd-url_start));
 		}
 	} else {
-		return Array.from(document.getElementsByTagName("link")).filter(x => x.rel==="canonical")[0].href;
+		const node = document.createElement("div");
+		node.innerHTML = value;
+		return Array.from(node.getElementsByTagName("link")).filter(x => x.rel==="canonical")[0].href;
 	}
 	return null;
 }
@@ -50,7 +52,7 @@ actionbtn.addEventListener("pointerup", ()=>{
 	let domain = input_domain.value;
 	const should_guess_url_from_content = document.getElementById("guess_url_from_content").checked;
 	if (should_guess_url_from_content || domain){
-		if (domain.match(/^[a-z0-9-]+([.][a-z0-9-]+)+$/) === null){
+		if ((!should_guess_url_from_content) && (domain.match(/^[a-z0-9-]+([.][a-z0-9-]+)+$/) === null)){
 			alert("Bad domain");
 			return;
 		}
