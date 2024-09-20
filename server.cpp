@@ -180,6 +180,7 @@ sqlite3_stmt* stmt2 = nullptr;
 #ifndef COMPSKY_NOSTATS
 sqlite3_stmt* stmt_stats_CountPerDomain;
 sqlite3_stmt* stmt_stats_LargestFiles;
+sqlite3_stmt* stmt_stats_NewestFiles;
 #endif
 
 constexpr
@@ -623,6 +624,7 @@ class HTTPResponseHandler {
 			
 			constexpr const char prefix7[8] = {'t','s','/','s','i','t','e','s'};
 			constexpr const char prefix8[8] = {'t','s','/','b','i','g','f','i'};
+			constexpr const char prefix9[8] = {'t','s','/','n','e','w','f','i'};
 			if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix7)){
 				compsky::asciify::asciify(itr, "<h2>All domains</h2><table><tr><th>Count</th><th>Total size</th><th>Domain</th></tr>");
 				while (sqlite3_step(stmt_stats_CountPerDomain) != SQLITE_DONE){
@@ -656,9 +658,34 @@ class HTTPResponseHandler {
 				}
 				compsky::asciify::asciify(itr, "</table>");
 				sqlite3_reset(stmt_stats_LargestFiles);
+			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix9)){
+				const char* const before_time_str = str + 20;
+				const int64_t before_time = (before_time_str[0] == ' ') ? 148204962366l : a2n<int64_t>(before_time_str);
+				
+				printf("Before %li\n", before_time);
+				sqlite3_bind_int64(stmt_stats_NewestFiles, 1, before_time);
+				
+				int64_t next_beforetime;
+				compsky::asciify::asciify(itr, "<h2>Files added before</h2><table><tr><th>Added</th><th>Domain</th></tr>");
+				while (sqlite3_step(stmt_stats_NewestFiles) != SQLITE_DONE){
+					const int64_t t = sqlite3_column_int64(stmt_stats_NewestFiles, 0);
+					next_beforetime = t;
+					
+					const char* const domain = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_NewestFiles, 1));
+					const int domain_sz = sqlite3_column_bytes(stmt_stats_NewestFiles, 1);
+					
+					const char* const path = reinterpret_cast<const char*>(sqlite3_column_text(stmt_stats_NewestFiles, 2));
+					const int path_sz = sqlite3_column_bytes(stmt_stats_NewestFiles, 2);
+					
+					compsky::asciify::asciify(itr, "<tr><td>", t, "</td><td><a href=\"/cached/https://", std::string_view(domain,domain_sz), std::string_view(path,path_sz), "\">",std::string_view(domain,domain_sz),"</a></td></tr>");
+				}
+				compsky::asciify::asciify(itr, "</table>");
+				compsky::asciify::asciify(itr, "<a href=\"/stats/newfiles/", next_beforetime, "\">Next</a>");
+				sqlite3_reset(stmt_stats_NewestFiles);
 			} else {
 				compsky::asciify::asciify(itr,
 					"<h2>Stats</h2>"
+					"<a href=\"/stats/newfiles/\">Newest files</a><br>"
 					"<a href=\"/stats/bigfiles\">Biggest files</a><br>"
 					"<a href=\"/stats/sites\">All cached sites</a>"
 				);
@@ -770,6 +797,20 @@ int main(const int argc,  const char* const* const argv){
 				return 1;
 			}
 			sqlite3_finalize(creation_stmt);
+			
+			sqlite3_stmt* file_t_added_indx_stmt;
+			if (sqlite3_prepare_v2(db, "CREATE INDEX file_t_added_idx ON file (t_added)", -1, &file_t_added_indx_stmt, NULL) != SQLITE_OK){
+				[[unlikely]];
+				fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
+				sqlite3_close(db);
+				return 1;
+			}
+			if (sqlite3_step(file_t_added_indx_stmt) != SQLITE_DONE){
+				[[unlikely]];
+				write(2, "Failed to create index\n", 23);
+				return 1;
+			}
+			sqlite3_finalize(file_t_added_indx_stmt);
 		} else {
 			return 1;
 		}
@@ -787,6 +828,12 @@ int main(const int argc,  const char* const* const argv){
 		return 1;
 	}
 	if (sqlite3_prepare_v2(db, "SELECT octet_length(content) AS sz, domain, path FROM file ORDER BY sz DESC LIMIT 100", -1, &stmt_stats_LargestFiles, NULL) != SQLITE_OK){
+		[[unlikely]];
+		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return 1;
+	}
+	if (sqlite3_prepare_v2(db, "SELECT t_added, domain, path FROM file WHERE t_added<? ORDER BY t_added DESC LIMIT 100", -1, &stmt_stats_NewestFiles, NULL) != SQLITE_OK){
 		[[unlikely]];
 		fprintf(stderr, "Failed to prepare SQL query: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
