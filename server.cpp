@@ -144,15 +144,16 @@ unsigned compress(char* const compressed_data_buf,  const void* const uncompress
 	return stream.total_out;
 }
 
-unsigned decompress(char* const decompressed_data_buf,  const void* const compressed_data,  const int compressed_size,  const int _max_decompressed_size){
+unsigned decompress_at_least(char* const decompressed_data_buf,  const void* const compressed_data,  const int compressed_size,  const int n_bytes_to_decompress_as){
 	z_stream stream;
 	memset(&stream, 0, sizeof(stream));
 	stream.avail_in = compressed_size;
 	stream.next_in = reinterpret_cast<Bytef*>(const_cast<void*>(compressed_data));
-	stream.avail_out = _max_decompressed_size;
+	stream.avail_out = n_bytes_to_decompress_as;
 	stream.next_out = reinterpret_cast<unsigned char*>(decompressed_data_buf);
 	
 	if (inflateInit2(&stream, 15 + 16) != Z_OK){
+		[[unlikely]];
 		write(2, "Failed to initialize zlib\n", 26);
 		return 0;
 	}
@@ -160,7 +161,8 @@ unsigned decompress(char* const decompressed_data_buf,  const void* const compre
 	const int result = inflate(&stream, Z_FINISH);
 	inflateEnd(&stream);
 	
-	if (result != Z_STREAM_END) {
+	if (stream.avail_out != 0){
+		[[unlikely]];
 		write(2, "Failed to decompress data with zlib\n", 36);
 		return 0;
 	}
@@ -283,9 +285,10 @@ class HTTPResponseHandler {
 					
 					const char* const header__content_encoding = find_substr(header_data, header_size, "\"content-encoding\": \"", 21);
 					const char* content_encoding_prefix = "";
+					const char* const content_encoding_prefix__gzip = "\r\nContent-Encoding: ";
 					std::string_view content_encoding(nullptr,0);
 					if (header__content_encoding != nullptr){
-						content_encoding_prefix = "\r\nContent-Encoding: ";
+						content_encoding_prefix = content_encoding_prefix__gzip;
 						
 						const char* const header__content_encoding__end = ffd894237sfdfsd(header__content_encoding);
 						
@@ -306,8 +309,14 @@ class HTTPResponseHandler {
 						mimetype_id = compsky::mimetyp::guess_mimetype(reinterpret_cast<const char*>(compressed_data));
 						if (mimetype_id == compsky::mimetyp::GZIP){
 							[[likely]];
+							
+							if (content_encoding_prefix != content_encoding_prefix__gzip){
+								content_encoding_prefix = content_encoding_prefix__gzip;
+								content_encoding = "gzip";
+							}
+							
 							char buf[compsky::mimetyp::n_bytes];
-							decompress(buf, compressed_data, compressed_size, compsky::mimetyp::n_bytes);
+							decompress_at_least(buf, compressed_data, compressed_size, compsky::mimetyp::n_bytes);
 							mimetype_id = compsky::mimetyp::guess_mimetype(buf);
 						}
 						const char* const mimetype = compsky::mimetyp::mimetype2str(mimetype_id);
