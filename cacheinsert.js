@@ -1,4 +1,4 @@
-R"===(const actionbtn = document.getElementById("actionbtn");
+const actionbtn = document.getElementById("actionbtn");
 const input_bothparts = document.getElementById("input_bothparts");
 const input_domain = document.getElementById("input_domain");
 const input_urlpath = document.getElementById("input_urlpath");
@@ -143,4 +143,4 @@ actionbtn.addEventListener("pointerup", ()=>{
 });
 document.getElementById("enable_textarea").addEventListener("change", e=>{
 	document.getElementById("textarea").disabled = !e.currentTarget.checked;
-});)==="
+});

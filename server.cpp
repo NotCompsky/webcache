@@ -27,6 +27,9 @@
 	"Content-Security-Policy: default-src 'none'; frame-src 'none'; connect-src 'self'; script-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'\r\n"
 
 
+std::string_view contents__cacheinsert_html;
+std::string_view contents__cacheinsert_js;
+
 constexpr std::string_view known_headers(
 	HEADER__RETURN_CODE__OK
 	HEADER__CONTENT_TYPE__HTML
@@ -34,25 +37,60 @@ constexpr std::string_view known_headers(
 	SECURITY_HEADERS
 	"Content-Length: "
 );
+constexpr size_t known_headers__max_sz = known_headers.size() + 19 + 4;
+constexpr std::string_view known_headers__js(
+	HEADER__RETURN_CODE__OK
+	HEADER__CONTENT_TYPE__JS
+	HEADER__CONNECTION_KEEP_ALIVE
+	HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
+	"Content-Length: "
+);
+constexpr std::string_view nullstrview(nullptr,0);
 char* init_knownheader_response(char* const buf){
-	return buf + known_headers.size() + 19 + 4; // size of content-length value, and size of \r\n\r\n
+	return buf + known_headers__max_sz; // size of content-length value, and size of \r\n\r\n
 }
-std::string_view stringview_from_knownheader_response(char* const buf,  char* const end_of_content,  char* const beginning_of_content){
-	const unsigned content_length = compsky::utils::ptrdiff(end_of_content,beginning_of_content);
-	unsigned content_length_ndigits = 0;
-	{
-		unsigned n = content_length;
-		do {
-			++content_length_ndigits;
-			n /= 10;
-		} while(n != 0);
+unsigned n_digits_of_number(unsigned n){
+	unsigned n_digits = 0;
+	do {
+		++n_digits;
+		n /= 10;
+	} while(n != 0);
+	return n_digits;
+}
+std::string_view load_file_contents_as_stringview(const char* const fp,  const std::string_view& headers){
+	// TODO: Encode as gzip
+	const compsky::os::ReadOnlyFile f(fp);
+	const size_t f_sz = f.size<0>();
+	if (f_sz == 0){
+		return nullstrview;
 	}
+	
+	const unsigned content_length_ndigits = n_digits_of_number(f_sz);
+	const unsigned buf_sz = headers.size() + content_length_ndigits + 4 + f_sz;
+	
+	char* const buf = reinterpret_cast<char*>(malloc(buf_sz));
+	
+	{
+		char* itr = buf;
+		compsky::asciify::asciify(itr, headers, f_sz, "\r\n\r\n");
+	}
+	f.read_entirety_into_buf(buf + headers.size() + content_length_ndigits + 4);
+		
+	return std::string_view(buf, buf_sz);
+}
+char* stringview_beginning__from_knownheader_response(char* const buf,  char* const end_of_content,  char* const beginning_of_content){
+	const unsigned content_length = compsky::utils::ptrdiff(end_of_content,beginning_of_content);
+	const unsigned content_length_ndigits = n_digits_of_number(content_length);
 	char* const beginning_of_response = buf + 19 - content_length_ndigits;
 	{
 		char* itr2 = beginning_of_response;
 		compsky::asciify::asciify(itr2, known_headers, content_length, "\r\n\r\n");
 	}
 	
+	return beginning_of_response;
+}
+std::string_view stringview_from_knownheader_response(char* const buf,  char* const end_of_content,  char* const beginning_of_content){
+	char* const beginning_of_response = stringview_beginning__from_knownheader_response(buf, end_of_content, beginning_of_content);
 	return std::string_view(beginning_of_response, compsky::utils::ptrdiff(end_of_content,beginning_of_response));
 }
 
@@ -413,25 +451,9 @@ class HTTPResponseHandler {
 					
 				}
 			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix4)){
-				return
-					HEADER__RETURN_CODE__OK
-					HEADER__CONTENT_TYPE__JS
-					HEADER__CONNECTION_KEEP_ALIVE
-					HEADERS__PLAIN_TEXT_RESPONSE_SECURITY
-					"Content-Length: 5332\r\n" // NOTE: If calculating length in Python, must add 4 bytes due to newlines being escaped
-					"\r\n"
-					#include "cacheinsert.js"
-				;
+				return contents__cacheinsert_js;
 			} else if (reinterpret_cast<uint64_t*>(str)[1] == uint64_value_of(prefix3)){
-				return
-					HEADER__RETURN_CODE__OK
-					HEADER__CONTENT_TYPE__HTML
-					HEADER__CONNECTION_KEEP_ALIVE
-					SECURITY_HEADERS
-					"Content-Length: 1760\r\n"
-					"\r\n"
-					#include "cacheinsert.html"
-				;
+				return contents__cacheinsert_html;
 			} else {
 				[[unlikely]];
 				printf("Bad request, not GET /cached/http: %.16s\n", str);
@@ -772,6 +794,18 @@ int main(const int argc,  const char* const* const argv){
 		return 1;
 	}
 	
+	
+	contents__cacheinsert_html = load_file_contents_as_stringview("cacheinsert.html", known_headers);
+	contents__cacheinsert_js = load_file_contents_as_stringview("cacheinsert.js", known_headers__js);
+	
+	if (contents__cacheinsert_html == nullstrview){
+		[[unlikely]];
+		return 1;
+	}
+	if (contents__cacheinsert_js == nullstrview){
+		[[unlikely]];
+		return 1;
+	}
 	
 	
 	if (sqlite3_open_v2(db_path, &db, sqlite_mode, nullptr) != SQLITE_OK){
