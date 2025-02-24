@@ -100,7 +100,8 @@ actionbtn.addEventListener("pointerup", ()=>{
 						alert("Path doesn't start with slash");
 						return;
 					}
-					fetch(document.location, {credentials:"include", method:"POST", body:domain+"\n"+path+"\n"+filepath+"\n\n"+contents}).then(r => {
+					const mimetype = ["","text/html","application/javascript","text/css","image/jpeg","image/png"][select_content_type.value];
+					fetch(document.location, {credentials:"include", method:"POST", body:domain+"\n"+path+"\n"+filepath+"\n"+mimetype+"\n"+contents}).then(r => {
 						actionbtn.disabled = false;
 						if(!r.ok){
 							const errstr = `Server returned ${r.status}: ${r.statusText}`;

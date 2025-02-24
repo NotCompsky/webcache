@@ -26,6 +26,14 @@ input {
 				<li><textarea id="textarea" disabled="" contenteditable></textarea></li>
 			</ul></li>
 		</ul>
+		<li>Content type <select id="select_content_type" value="0">
+			<option value="0">Unknown (let server guess)</option>
+			<option value="1">HTML (but without '&lt;!DOCTYPE html&gt;')</option>
+			<option value="2">JavaScript</option>
+			<option value="3">CSS</option>
+			<option value="4">JPEG</option>
+			<option value="5">PNG</option>
+		</select></li>
 		<li><input type="text" value="www.domain.com" placeholder="domain" id="input_domain"/></li>
 		<li><input type="text" placeholder="/url/path" id="input_urlpath"/></li>
 		<li><input type="text" placeholder="https://www.domain.com/url/path (for automated splitting)" id="input_bothparts" autocomplete="off"/></li>
