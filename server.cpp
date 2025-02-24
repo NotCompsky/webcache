@@ -353,8 +353,18 @@ class HTTPResponseHandler {
 								content_encoding = "gzip";
 							}
 							
-							char buf[compsky::mimetyp::n_bytes];
+							char buf[compsky::mimetyp::n_bytes + 4];
+							memset(buf, 0, compsky::mimetyp::n_bytes + 4);
 							decompress_at_least(buf, compressed_data, compressed_size, compsky::mimetyp::n_bytes);
+							if (
+								(buf[compsky::mimetyp::n_bytes+0] != 0) or
+								(buf[compsky::mimetyp::n_bytes+1] != 0) or
+								(buf[compsky::mimetyp::n_bytes+2] != 0) or
+								(buf[compsky::mimetyp::n_bytes+3] != 0)
+							){
+								printf("ERROR: Decompression went over bound (probably will cause future error, so aborting)\n");
+								abort();
+							}
 							mimetype_id = compsky::mimetyp::guess_mimetype(buf);
 						}
 						const char* const mimetype = compsky::mimetyp::mimetype2str(mimetype_id);
